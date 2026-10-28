@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync('index.html','utf8'),script=html.match(/<script id="core">([\s\S]*?)<\/script>/)[1];
+const context={module:{exports:{}},Number,String,Set,Math,Error};vm.runInNewContext(script,context);const C=context.module.exports;
+const base=Object.fromEntries(C.fields.map(k=>[k,'']));
+const humid={...base,case_id:'reference',gas_a:'CO2',gas_b:'N2',method:'M1',mode:'sweep',basis:'humid',driving_model:'feed_retentate',flow_basis:'dry',feed_bar:'1.65',retentate_bar:'1.63',permeate_bar:'1.01',temp_C:'25',area_cm2:'50',feed_sccm:'120',sweep_sccm:'35',permeate_sccm:'38.5',feed_a_pct:'12',feed_b_pct:'88',retentate_a_pct:'11.039',retentate_b_pct:'88.961',permeate_a_pct:'4',permeate_b_pct:'5.1',feed_water_kpa:'3.1',retentate_water_kpa:'3.1',permeate_water_kpa:'3.1',gc:'confirmed',steady:'confirmed',leak:'confirmed',sweep_clean:'confirmed'};
+function near(a,b,tol=1e-7){assert.ok(Math.abs(a-b)<tol,`${a} != ${b}`)}
+let r=C.calculate(humid);assert.equal(r.ok,true);near(C.GPU_SI,3.346398156081778e-10,1e-20);near(r.dp_a,14623.6805,1e-5);near(r.dp_b,137367.4195,1e-5);near(r.gpu_a,46.7999938794,1e-7);near(r.gpu_b,6.35226973391,1e-8);near(r.ratio,7.36744436867,1e-8);near(r.factor,5.75163398693,1e-8);assert.equal(r.stageCut,null);assert.equal(r.recoveryA,null);
+let wet=C.calculate({...humid,flow_basis:'wet',permeate_sccm:'50',outlet_water_pct:'23'});assert.equal(wet.ok,true);near(wet.gpu_a,r.gpu_a);near(wet.gpu_b,r.gpu_b);
+assert.ok(C.calculate({...humid,feed_water_kpa:''}).errors.includes('missing_feed_water_kpa'));
+assert.ok(C.calculate({...humid,permeate_water_kpa:'102'}).errors.includes('water_pressure'));
+assert.ok(C.calculate({...humid,flow_basis:'wet',outlet_water_pct:''}).errors.includes('missing_outlet_water_pct'));
+assert.ok(C.calculate({...humid,mode:'sweep',sweep_clean:'unknown'}).errors.includes('check_sweep_clean'));
+assert.ok(C.calculate({...humid,permeate_a_pct:'20'}).errors.includes('driving_a'));
+assert.ok(C.calculate({...humid,permeate_a_pct:'90',permeate_b_pct:'20'}).errors.includes('sum'));
+assert.ok(C.calculate({...humid,gc:'failed'}).errors.includes('check_gc'));
+assert.ok(C.calculate({...humid,mode:'sweep',sweep_clean:'confirmed',permeate_sccm:'999'}).errors.includes('component_balance'));
+let dry={...base,case_id:'dry',gas_a:'CO2',gas_b:'N2',method:'D1',mode:'no_sweep',basis:'dry',driving_model:'feed_only',flow_basis:'dry',feed_bar:'5',permeate_bar:'1',temp_C:'25',area_cm2:'50',feed_sccm:'500',permeate_sccm:'5',feed_a_pct:'15',feed_b_pct:'85',permeate_a_pct:'40',permeate_b_pct:'60',gc:'confirmed',steady:'confirmed',leak:'confirmed',sweep_clean:'unknown'};
+let dr=C.calculate(dry);assert.equal(dr.ok,true);near(dr.dp_a,35000);near(dr.dp_b,365000);near(dr.stageCut,1);near(dr.recoveryA,100*2/75);assert.ok(C.calculate({...dry,permeate_sccm:'501'}).errors.includes('total_balance'));
+assert.equal(C.compare(humid,{...humid,case_id:'other',permeate_a_pct:'3',permeate_b_pct:'5'}).ok,true);assert.equal(C.compare(humid,{...humid,case_id:'other',sweep_sccm:'30'}).ok,false);assert.ok(C.compare(humid,{...humid,case_id:'other',sweep_sccm:'30'}).different.includes('sweep_sccm'));assert.equal(C.compare(humid,humid).reason,'selection');
+const fixture=fs.readFileSync('examples/synthetic-cases.csv','utf8');let input=C.importCSV(fixture);assert.equal(input.length,2);assert.equal(C.calculate(input[0]).ok,true);assert.equal(C.compare(input[0],input[1]).ok,true);
+assert.throws(()=>C.importCSV('case_id\nx'),/Missing columns/);assert.throws(()=>C.importCSV(C.fields.join(',')+'\n"unclosed'),/Unclosed/);assert.throws(()=>C.importCSV(fixture+fixture.split('\n')[1]),/unique/);
+console.log('Core tests passed: humid sweep, water correction, absolute/partial pressure, mixed-gas ratios, dry mode, CSV and checks.');
