@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync('index.html','utf8'),parts=[...html.matchAll(/<script(?: id="core")?>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
+class Element{constructor(id){this.id=id;this.value='';this.innerHTML='';this.textContent='';this.listeners={};this.dataset={};this.files=[];this.style={}}addEventListener(type,fn){(this.listeners[type]??=[]).push(fn)}async event(type){for(const fn of this.listeners[type]||[])await fn({target:this})}append(){}remove(){}click(){}}
+let els=new Map(),storage=new Map();const document={getElementById(id){if(!els.has(id))els.set(id,new Element(id));return els.get(id)},querySelectorAll(){return []},documentElement:{},body:{append(){}},createElement(tag){return new Element(tag)}};
+const localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};let printed=false;
+const ctx={document,localStorage,console,confirm:()=>true,prompt:()=>null,window:{print(){printed=true}},navigator:{clipboard:{async writeText(){}}},Blob,URL:{createObjectURL(){return 'blob:test'},revokeObjectURL(){}},setTimeout,Date,Math,Number,String,Set,JSON,Error};
+vm.runInNewContext(parts[0],ctx);vm.runInNewContext(parts[1],ctx);const $=id=>document.getElementById(id),project=()=>JSON.parse(storage.get('membrane-gas-support-v1'));
+(async()=>{assert.equal(project().selected,'Synthetic Case');assert.equal($('resultTag').textContent,'READY FOR REVIEW');assert.notEqual($('permA').textContent,'—');assert.equal($('cut').textContent,'—');assert.match($('compareStatus').textContent,/Conditions match/);
+$('field_permeate_water_kpa').value='';await $('field_permeate_water_kpa').event('input');assert.equal($('resultTag').textContent,'ON HOLD');assert.match($('validation').textContent,/Permeate water/);
+$('field_permeate_water_kpa').value='3.1';await $('field_permeate_water_kpa').event('input');let fixture=fs.readFileSync('examples/synthetic-cases.csv','utf8');$('csvFile').files=[{size:Buffer.byteLength(fixture),text:async()=>fixture}];await $('csvFile').event('change');assert.equal(project().runs.length,4);assert.equal(project().selected,'CSV-Case');assert.match($('message').textContent,/Imported 2/);
+$('ref').value='CSV-Reference';await $('ref').event('change');assert.match($('compareStatus').textContent,/Conditions match/);assert.notEqual($('sel').textContent,'—');
+let before=JSON.stringify(project());$('csvFile').files=[{size:5,text:async()=>fixture}];await $('csvFile').event('change');assert.match($('message').textContent,/already exists/);assert.equal(JSON.stringify(project()),before);
+$('language').event('click');assert.match($('compareStatus').textContent,/条件匹配/);assert.match($('issue').value,/模拟案例/);$('print').event('click');assert.equal(printed,true);assert.match($('printReport').textContent,/膜与气体分离技术支持报告/);assert.match($('printReport').textContent,/有吹扫气时不计算/);assert.match($('printReport').textContent,/CSV-Case/);
+console.log('UI-flow tests passed: humid sweep input, CSV import, comparison, language and report.');})().catch(e=>{console.error(e);process.exit(1)});
