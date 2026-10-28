@@ -2,7 +2,7 @@
 
 A bilingual, offline application-support prototype for reviewing mixed-gas membrane tests: test context, calibrated GC compositions, permeance, separation factors, evidence and next steps. The example scenario is **synthetic** and is not experimental data or a performance claim.
 
-**[Open the workbench](https://andypeng09.github.io/membrane-gas-separation-support/)** · [中文说明](#中文说明)
+**[Open the workbench](https://andypeng09.github.io/PEMFC-Electrocatalyst-Activity-Analyzer/membrane-gas-support/)** · [中文说明](#中文说明)
 
 ## What it does
 
