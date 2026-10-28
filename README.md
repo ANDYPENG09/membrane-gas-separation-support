@@ -4,6 +4,10 @@ A bilingual, offline application-support prototype for reviewing mixed-gas membr
 
 **[Open the workbench](https://andypeng09.github.io/PEMFC-Electrocatalyst-Activity-Analyzer/membrane-gas-support/)** · [中文说明](#中文说明)
 
+![Synthetic membrane separation visual overview](assets/visual-overview.svg)
+
+*Preview uses synthetic data. The interactive workbench includes all five views and individual SVG downloads.*
+
 ## What it does
 
 - Records run identifiers, gas pair, feed / retentate / permeate absolute pressures and compositions, effective area, temperature, water partial pressures, flow and measurement checks.
@@ -57,9 +61,10 @@ Relevant methods: [NIST water vapor-pressure parameters](https://webbook.nist.go
 ```bash
 node tests/test_core.cjs
 node tests/test_ui.cjs
+node scripts/build_preview.cjs --check
 ```
 
-Core tests cover independent hand-calculated humid-sweep values, wet-to-dry outlet conversion, inlet and feed/retentate models, dry no-sweep stage cut, non-positive partial pressure, missing moisture, gas balances, CSV, comparator gating and sensitivity-model consistency. UI-flow tests use a lightweight mocked DOM; browser rendering and interactive controls should also be checked after changes.
+Core tests cover independent hand-calculated humid-sweep values, wet-to-dry outlet conversion, inlet and feed/retentate models, dry no-sweep stage cut, non-positive partial pressure, missing moisture, gas balances, CSV, comparator gating and sensitivity-model consistency. UI-flow tests use a lightweight mocked DOM. The preview check verifies that the README image matches the workbench’s synthetic example; regenerate it using `node scripts/build_preview.cjs` after relevant visual changes. Browser rendering and interactive controls should also be checked after changes.
 
 ## 中文说明
 
